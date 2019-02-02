@@ -1,26 +1,39 @@
 language: python
 python:
-  - "3.4"
-#  - "3.5"
-#  - "3.6"
+- '3.4'
 env:
+  global:
+  - secure: IfGIMG/koZ5jRWicqJwIFBkDIVEzoWN9h/96/1ko3tV39lq7y/NYEKAwEKS4D9nqYl9CoPPNmqwYCaBTCiK7oHnASQYQX8/H0E6X8uDlYm7YATgQohEtMdg+eKFN+7/VVlGJgEK9pdoAAE3UIEs/ML5+g9QQ4+EscQ58qiEwIQmWvq4vdtH+8KM5goilQ/oAy3Vhcw3T1aZNojVO84NBLNZtD+592QR1PmhpSGz7qVwTmc0aETkUW0ivHeROM1L+yOuJq1aHCLsI6x9LsILgVddmd1e1Cac1vJMDKQis+gjwZxaJnxEQG6EUePfSv/PKvxYFc5OMxbuv7QcSF6OKZ/pYjOaf03RV+QcpTaO40Vr3mbCtkyd1vKO+jp5T0TH+9bWpXaibm8ae2CjQSasUhRQ3tY/kgeMugClbMU+Zgqx1mhmexx/+EWQdOcuMVKdKLKIOuxrfRCuJ6fhsDDYKdOZkTauNivM4Kv1X/tyHFIdU5OAJgK0cWwbW/FSR6hiXr0YB/w6vCDPXeDYo5o0GvaIa8fG0PwzYesRnDR7dnaJ3m0PvmfTFHjniDi/+ti+zQ3NRiSAbxWbwTIo8Kpgd61BOGpV84Zt9x1NByUVCOI1FC51f2HLEY/gLoIW2D1I3Ugf+K1oOWuzGta0/9cusP1OhFCKhFjT9dieNv44Be9s=
+  matrix:
   - TEST_IMAGE=ubuntu-14.04
   - TEST_IMAGE=ubuntu-16.04
 services:
-  - docker
+- docker
 before_install:
-  - ./ci/prepare.sh
+- "./ci/prepare.sh"
 install:
-  - pip3 install coverage
-  - pip3 install coveralls
+- pip3 install coverage
+- pip3 install coveralls
+- pip3 install requests
 before_script:
-  - printf '\nimport coverage\ncoverage.current_coverage = coverage.process_startup()\n' >> "/home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/lib/python${TRAVIS_PYTHON_VERSION}/sitecustomize.py"
-
-  # Remove old coverage reports
-  - rm -f .coverage-report.*
+- echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+- printf '\nimport coverage\ncoverage.current_coverage = coverage.process_startup()\n'
+  >> "/home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/lib/python${TRAVIS_PYTHON_VERSION}/sitecustomize.py"
+- rm -f .coverage-report.*
 script: COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/.coveragerc ci/test.py -v
 after_success:
-  - coverage3 combine
-  - coveralls
-
-
+- coverage3 combine
+- coveralls
+deploy:
+- provider: script
+  skip_cleanup: true
+  script: "./ci/deploy_docker.py $TEST_IMAGE"
+  on:
+    all_branches: true
+    condition: "$TRAVIS_PULL_REQUEST == false && ($TRAVIS_BRANCH == master || $TRAVIS_TAG
+      =~ ^v[0-9].*$)"
+- provider: script
+  skip_cleanup: true
+  script: "./ci/deploy_docker.py $TEST_IMAGE:next"
+  on:
+    branch: next
