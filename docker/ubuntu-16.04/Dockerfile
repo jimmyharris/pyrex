@@ -66,6 +66,8 @@ RUN apt-get -y update && apt-get -y install \
     g++-multilib \
 # Screen to enable devshell
     screen \
+# QEMU dependencies
+    iptables \
 && rm -rf /var/lib/apt/lists/*
 
 # Install wine, needed to test meta-mingw SDKs

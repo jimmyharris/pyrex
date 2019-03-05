@@ -82,6 +82,8 @@ RUN apt-get -y update && apt-get -y install \
     g++-multilib \
 # Screen to enable devshell
     screen \
+# QEMU dependencies
+    iptables \
 && rm -rf /var/lib/apt/lists/*
 
 ENV PYREX_UTILS_VERSION=2019.02.22
