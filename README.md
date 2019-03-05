@@ -215,6 +215,30 @@ two ways:
 2. Set the environment variable `PYREX_DOCKER` to `0`. Any Pyrex commands run
    with this variable will not be run in the Docker container.
 
+## Running QEMU
+Running QEMU built from Yocto (using the `runqemu` command) should work out of
+the box as long as you take the following into account:
+
+1. By default, `runqemu` tries to setup up qemu to use a tap interface. By
+   default, the Pyrex docker image doesn't have permission to change the tap
+   interfaces. You can fix this in one of two ways:
+    1. Run qemu with the `slirp` networking option like (e.g. `runqemu slirp`).
+       *Note:* The slirp interface is not very performant
+    2. Enable docker to manage the tap interfaces. To do this, add `--device
+       /dev/net/tun --cap-add NET_ADMIN` to `${run:args}`
+2. If you want to use the `kvm` options to accelerate the qemu execution, you must add
+   `--device /dev/kvm` to `${run:args}`
+
+**Example:** Add the following to your `pyrex.ini` to enable full acceleration
+and networking capabilities:
+```ini
+[run]
+args =
+    --device /dev/kvm
+    --device /dev/net/tun
+    --cap-add NET_ADMIN
+```
+
 ## What doesn't work?
 The following items are either known to not work, or haven't been fully tested:
 * **Bitbake Server** Since the Docker container starts and stops each time a
