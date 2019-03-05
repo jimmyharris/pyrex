@@ -88,6 +88,13 @@ class PyrexTest(unittest.TestCase):
         return config
 
     def assertSubprocess(self, *args, capture=False, returncode=0, **kwargs):
+        def check_retcode(ret, **kwargs):
+            # An expected return code of -1 matches any non-zero exit code
+            if returncode == -1:
+                self.assertNotEqual(ret, 0, **kwargs)
+            else:
+                self.assertEqual(ret, returncode, **kwargs)
+
         if capture:
             try:
                 output = subprocess.check_output(*args, stderr=subprocess.STDOUT, **kwargs)
@@ -97,7 +104,7 @@ class PyrexTest(unittest.TestCase):
             else:
                 ret = 0
 
-            self.assertEqual(ret, returncode, msg='%s: %s' % (' '.join(*args), output.decode('utf-8')))
+            check_retcode(ret, msg='%s: %s' % (' '.join(*args), output.decode('utf-8')))
             return output
         else:
             with subprocess.Popen(*args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kwargs) as proc:
@@ -111,7 +118,7 @@ class PyrexTest(unittest.TestCase):
 
                 ret = proc.poll()
 
-            self.assertEqual(ret, returncode, msg='%s failed')
+            check_retcode(ret, msg='%s failed')
             return None
 
     def assertPyrexHostCommand(self, *args, quiet_init=False, **kwargs):
@@ -339,6 +346,32 @@ class PyrexCore(PyrexTest):
         env['PYREXCONFTEMPLATE'] = conftemplate
 
         self.assertPyrexHostCommand('true', returncode=1, env=env)
+
+    def test_bind(self):
+        test_dir = os.path.join(self.thread_dir, 'bind-test-required')
+        test_dir_optional = os.path.join(self.thread_dir, 'bind-test-optional')
+
+        conf = self.get_config()
+        conf['run']['bind'] += ' %s ?%s' % (test_dir, test_dir_optional)
+        conf.write_conf()
+
+        # If the mandatory bind is missing, it is an error
+        self.assertPyrexContainerCommand('true', returncode=-1)
+
+        # Create the mandatory bind. An optional bind missing is not an error
+        os.mkdir(test_dir)
+        self.assertPyrexContainerCommand('test -d %s -a ! -d %s' % (test_dir, test_dir_optional))
+
+        # Create the optional bind
+        os.mkdir(test_dir_optional)
+        self.assertPyrexContainerCommand('test -d %s -a -d %s' % (test_dir, test_dir_optional))
+
+    def test_empty_optional_bind(self):
+        conf = self.get_config()
+        conf['run']['bind'] += ' ? '
+        conf.write_conf()
+
+        self.assertPyrexContainerCommand('true')
 
 class TestImage(PyrexTest):
     def test_tini(self):

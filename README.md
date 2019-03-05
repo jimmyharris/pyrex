@@ -156,6 +156,9 @@ Common reasons for adding new paths include:
 * Alternate (out of tree) build directories
 * Additional layers that are not under the OEROOT directory
 
+Optional bind may be specified by prefixing the bind with `?`. In this case,
+the directory (or file) will only be bound into the container if it exists.
+
 It is recommended to use this variable and bind directories in a 1-to-1 fashion
 rather than try to remap them to different paths inside the Docker image.
 Bitbake tends to encode file paths into some of its internal state (*Note*

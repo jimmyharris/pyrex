@@ -364,7 +364,19 @@ def main():
 
             # Configure binds
             for b in set(config['run']['bind'].split()):
-                docker_args.extend(['--mount', 'type=bind,src={b},dst={b}'.format(b=b)])
+                if b.startswith('?'):
+                    bind = b[1:]
+
+                    # The bind might be empty after expansion. If so, skip it
+                    if not bind:
+                        continue
+
+                    # Skip bind if it doesn't exist
+                    if not os.path.exists(bind):
+                        continue
+                else:
+                    bind = b
+                docker_args.extend(['--mount', 'type=bind,src={b},dst={b}'.format(b=bind)])
 
             # Pass environment variables
             for e in config['run']['envvars'].split():
