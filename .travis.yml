@@ -1,3 +1,4 @@
+dist: xenial
 language: python
 python:
 - '3.4'
@@ -8,10 +9,14 @@ env:
   - TEST_IMAGE=ubuntu-14.04
   - TEST_IMAGE=ubuntu-16.04
   - TEST_IMAGE=ubuntu-18.04
-services:
-- docker
 before_install:
 - "./ci/prepare.sh"
+- |
+  echo '{ "features": { "buildkit": true } }' | sudo tee /etc/docker/daemon.json
+- curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+- sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+- sudo apt-get update
+- sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
 install:
 - pip3 install coverage
 - pip3 install coveralls
@@ -21,7 +26,7 @@ before_script:
 - printf '\nimport coverage\ncoverage.current_coverage = coverage.process_startup()\n'
   >> "/home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/lib/python${TRAVIS_PYTHON_VERSION}/sitecustomize.py"
 - rm -f .coverage-report.*
-script: COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/.coveragerc ci/test.py -v
+script: COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/.coveragerc ci/test.py -vb
 after_success:
 - coverage3 combine
 - coveralls
